@@ -11,6 +11,6 @@ import (
 )
 
 func init() {
-	_ = res.AddWithTags(logger.StdoutOutput{}, res.TagReplaceable)
+	_ = res.AddWithTags(logger.OutputStdout{}, res.TagReplaceable)
 	_ = res.AddWithTags(&logger.Log{Level: "info", Format: "json"}, res.TagReplaceable)
 }
