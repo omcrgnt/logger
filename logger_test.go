@@ -25,7 +25,7 @@ func (t *testOutput) markerLoggerOutput() {}
 func setupUseDefaults() {
 	res.ResetDefault()
 	active = noopLogger{}
-	_ = res.AddWithTags(OutputStdout{}, res.TagReplaceable)
+	_ = res.AddWithTags(DefaultStdout(), res.TagReplaceable)
 	_ = res.AddWithTags(DefaultLog(), res.TagReplaceable)
 }
 
@@ -95,7 +95,39 @@ func TestLogImpl_Inject(t *testing.T) {
 	}
 }
 
+func TestOutputStdoutConfig(t *testing.T) {
+	res.ResetDefault()
+	active = noopLogger{}
+
+	rawOut, err := OutputStdoutConfig{}.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := res.Add(rawOut); err != nil { //nolint:forbidigo // simulates app builder wiring
+		t.Fatal(err)
+	}
+
+	rawLog, err := Config{
+		Level:  &loggerv1.Level{Value: "info"},
+		Format: &loggerv1.Format{Value: "text"},
+	}.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := res.Add(rawLog); err != nil { //nolint:forbidigo // simulates app builder wiring
+		t.Fatal(err)
+	}
+	if err := sdi.Resolve(res.Default); err != nil {
+		t.Fatal(err)
+	}
+
+	Info(context.Background(), "stdout-line")
+}
+
 func TestOutputFileConfig(t *testing.T) {
+	res.ResetDefault()
+	active = noopLogger{}
+
 	dir := t.TempDir()
 	path := dir + "/app.log"
 

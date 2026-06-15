@@ -15,7 +15,7 @@ import (
 func setupUseDefaults(t *testing.T) {
 	t.Helper()
 	res.ResetDefault()
-	_ = res.AddWithTags(logger.OutputStdout{}, res.TagReplaceable)
+	_ = res.AddWithTags(logger.DefaultStdout(), res.TagReplaceable)
 	_ = res.AddWithTags(logger.DefaultLog(), res.TagReplaceable)
 }
 
