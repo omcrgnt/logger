@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/omcrgnt/proto/gen/go v0.3.0
-	github.com/omcrgnt/res v1.0.0
+	github.com/omcrgnt/res v0.6.0
 	github.com/omcrgnt/sdi v1.0.0
 )
 

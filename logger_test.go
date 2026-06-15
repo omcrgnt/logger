@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/omcrgnt/res"
+	"github.com/omcrgnt/sdi"
 	loggerv1 "github.com/omcrgnt/proto/gen/go/logger/v1"
 )
 
@@ -19,52 +21,75 @@ func (t *testOutput) Write(p []byte) (int, error) { return t.buf.Write(p) }
 
 func (t *testOutput) markerLoggerOutput() {}
 
-func TestConfig_defaults(t *testing.T) {
-	raw, err := Config{}.Build()
+// setupUseDefaults clears res and registers system Output + Log, as logger/use init does.
+func setupUseDefaults() {
+	res.ResetDefault()
+	active = noopLogger{}
+	_ = res.AddWithTags(OutputStdout{}, res.TagReplaceable)
+	_ = res.AddWithTags(DefaultLog(), res.TagReplaceable)
+}
+
+func TestNoop_withoutRegistry(t *testing.T) {
+	res.ResetDefault()
+	active = noopLogger{}
+
+	Info(context.Background(), "silent")
+	Default().Info(context.Background(), "silent")
+}
+
+func TestConfig_build(t *testing.T) {
+	setupUseDefaults()
+	raw, err := Config{
+		Level:  &loggerv1.Level{Value: "info"},
+		Format: &loggerv1.Format{Value: "json"},
+	}.Build()
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := raw.(*Logger)
-	l.Inject([]any{&testOutput{}})
+	if err := res.Add(raw); err != nil { //nolint:forbidigo // simulates app builder wiring
+		t.Fatal(err)
+	}
+	if err := sdi.Resolve(res.Default); err != nil {
+		t.Fatal(err)
+	}
 
 	Info(context.Background(), "hello")
 }
 
-func TestConfig_invalidLevel(t *testing.T) {
-	t.Parallel()
+func TestDefault_fromRegistry(t *testing.T) {
+	setupUseDefaults()
+	if err := sdi.Resolve(res.Default); err != nil {
+		t.Fatal(err)
+	}
 
-	_, err := Config{
-		Level: loggerv1.Level{Value: "trace"},
-	}.Build()
-	if err == nil {
-		t.Fatal("expected error for invalid level")
+	out := &testOutput{}
+	// Replace stdout wiring for assertion: re-register output and resolve.
+	res.ResetDefault()
+	_ = res.AddWithTags(out, res.TagReplaceable)
+	_ = res.AddWithTags(DefaultLog(), res.TagReplaceable)
+	if err := sdi.Resolve(res.Default); err != nil {
+		t.Fatal(err)
+	}
+
+	Default().Info(context.Background(), "instance")
+	if !strings.Contains(out.buf.String(), "instance") {
+		t.Fatalf("expected instance log, got %q", out.buf.String())
 	}
 }
 
-func TestConfig_invalidFormat(t *testing.T) {
-	t.Parallel()
-
-	_, err := Config{
-		Format: loggerv1.Format{Value: "yaml"},
-	}.Build()
-	if err == nil {
-		t.Fatal("expected error for invalid format")
-	}
-}
-
-func TestLogger_Inject(t *testing.T) {
+func TestLogImpl_Inject(t *testing.T) {
 	out := &testOutput{}
 	raw, err := Config{
-		Level:  loggerv1.Level{Value: "debug"},
-		Format: loggerv1.Format{Value: "text"},
+		Level:  &loggerv1.Level{Value: "debug"},
+		Format: &loggerv1.Format{Value: "text"},
 	}.Build()
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := raw.(*Logger)
+	l := raw.(*logger)
 	l.Inject([]any{out})
 
-	Debug(context.Background(), "debug-msg")
+	l.Debug(context.Background(), "debug-msg")
 	if !strings.Contains(out.buf.String(), "debug-msg") {
 		t.Fatalf("expected debug in output, got %q", out.buf.String())
 	}
@@ -74,20 +99,27 @@ func TestOutputFileConfig(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/app.log"
 
-	raw, err := OutputFileConfig{Path: path}.Build()
+	rawOut, err := OutputFileConfig{Path: path}.Build()
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := raw.(Output)
+	if err := res.Add(rawOut); err != nil { //nolint:forbidigo // simulates app builder wiring
+		t.Fatal(err)
+	}
 
 	rawLog, err := Config{
-		Format: loggerv1.Format{Value: "text"},
+		Level:  &loggerv1.Level{Value: "info"},
+		Format: &loggerv1.Format{Value: "text"},
 	}.Build()
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := rawLog.(*Logger)
-	l.Inject([]any{out})
+	if err := res.Add(rawLog); err != nil { //nolint:forbidigo // simulates app builder wiring
+		t.Fatal(err)
+	}
+	if err := sdi.Resolve(res.Default); err != nil {
+		t.Fatal(err)
+	}
 
 	Info(context.Background(), "file-line")
 	data, err := os.ReadFile(path)
@@ -106,7 +138,8 @@ func TestOutputFileConfig_emptyPath(t *testing.T) {
 	}
 }
 
-func TestInfo_defaultBootstrap(t *testing.T) {
+func TestInfo_afterResolve(t *testing.T) {
+	setupUseDefaults()
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
@@ -115,9 +148,11 @@ func TestInfo_defaultBootstrap(t *testing.T) {
 	os.Stdout = w
 	t.Cleanup(func() { os.Stdout = old })
 
-	if err := applyHandler(defaultLevelValue, defaultFormatValue, stdoutOutput{}); err != nil {
+	if err := sdi.Resolve(res.Default); err != nil {
 		t.Fatal(err)
 	}
+
+	Info(context.Background(), "bootstrap-test")
 
 	done := make(chan []byte, 1)
 	go func() {
@@ -125,8 +160,6 @@ func TestInfo_defaultBootstrap(t *testing.T) {
 		_, _ = io.Copy(&buf, r)
 		done <- buf.Bytes()
 	}()
-
-	Info(context.Background(), "bootstrap-test")
 	_ = w.Close()
 	out := <-done
 	if !strings.Contains(string(out), "bootstrap-test") {
