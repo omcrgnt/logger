@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/omcrgnt/builder"
 	"github.com/omcrgnt/res"
 	"github.com/omcrgnt/sdi"
 	loggerv1 "github.com/omcrgnt/proto/gen/go/logger/v1"
@@ -25,8 +26,9 @@ func (t *testOutput) markerLoggerOutput() {}
 func setupUseDefaults() {
 	res.ResetDefault()
 	active = noopLogger{}
-	_ = res.AddWithTags(DefaultStdout(), res.TagReplaceable)
-	_ = res.AddWithTags(DefaultLog(), res.TagReplaceable)
+	_ = res.AddWithTags(DefaultLogConfig(), res.TagReplaceable)
+	_ = res.AddWithTags(DefaultStdoutConfig(), res.TagReplaceable)
+	_ = builder.Build(res.Default)
 }
 
 func TestNoop_withoutRegistry(t *testing.T) {
@@ -38,15 +40,18 @@ func TestNoop_withoutRegistry(t *testing.T) {
 }
 
 func TestConfig_build(t *testing.T) {
-	setupUseDefaults()
-	raw, err := Config{
-		Level:  &loggerv1.Level{Value: "info"},
-		Format: &loggerv1.Format{Value: "json"},
-	}.Build()
-	if err != nil {
+	res.ResetDefault()
+	active = noopLogger{}
+	if err := res.Add(OutputStdoutConfig{}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(raw); err != nil { //nolint:forbidigo // simulates app builder wiring
+	if err := res.Add(Config{
+		Level:  &loggerv1.Level{Value: "info"},
+		Format: &loggerv1.Format{Value: "json"},
+	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+		t.Fatal(err)
+	}
+	if err := builder.Build(res.Default); err != nil {
 		t.Fatal(err)
 	}
 	if err := sdi.Resolve(res.Default); err != nil {
@@ -57,16 +62,14 @@ func TestConfig_build(t *testing.T) {
 }
 
 func TestDefault_fromRegistry(t *testing.T) {
-	setupUseDefaults()
-	if err := sdi.Resolve(res.Default); err != nil {
+	out := &testOutput{}
+	res.ResetDefault()
+	active = noopLogger{}
+	_ = res.AddWithTags(out, res.TagReplaceable)
+	_ = res.AddWithTags(DefaultLogConfig(), res.TagReplaceable)
+	if err := builder.Build(res.Default); err != nil {
 		t.Fatal(err)
 	}
-
-	out := &testOutput{}
-	// Replace stdout wiring for assertion: re-register output and resolve.
-	res.ResetDefault()
-	_ = res.AddWithTags(out, res.TagReplaceable)
-	_ = res.AddWithTags(DefaultLog(), res.TagReplaceable)
 	if err := sdi.Resolve(res.Default); err != nil {
 		t.Fatal(err)
 	}
@@ -99,22 +102,16 @@ func TestOutputStdoutConfig(t *testing.T) {
 	res.ResetDefault()
 	active = noopLogger{}
 
-	rawOut, err := OutputStdoutConfig{}.Build()
-	if err != nil {
+	if err := res.Add(OutputStdoutConfig{}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(rawOut); err != nil { //nolint:forbidigo // simulates app builder wiring
-		t.Fatal(err)
-	}
-
-	rawLog, err := Config{
+	if err := res.Add(Config{
 		Level:  &loggerv1.Level{Value: "info"},
 		Format: &loggerv1.Format{Value: "text"},
-	}.Build()
-	if err != nil {
+	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(rawLog); err != nil { //nolint:forbidigo // simulates app builder wiring
+	if err := builder.Build(res.Default); err != nil {
 		t.Fatal(err)
 	}
 	if err := sdi.Resolve(res.Default); err != nil {
@@ -131,22 +128,16 @@ func TestOutputFileConfig(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/app.log"
 
-	rawOut, err := OutputFileConfig{Path: path}.Build()
-	if err != nil {
+	if err := res.Add(OutputFileConfig{Path: path}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(rawOut); err != nil { //nolint:forbidigo // simulates app builder wiring
-		t.Fatal(err)
-	}
-
-	rawLog, err := Config{
+	if err := res.Add(Config{
 		Level:  &loggerv1.Level{Value: "info"},
 		Format: &loggerv1.Format{Value: "text"},
-	}.Build()
-	if err != nil {
+	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(rawLog); err != nil { //nolint:forbidigo // simulates app builder wiring
+	if err := builder.Build(res.Default); err != nil {
 		t.Fatal(err)
 	}
 	if err := sdi.Resolve(res.Default); err != nil {
