@@ -11,6 +11,6 @@ import (
 )
 
 func init() {
-	_ = res.AddWithTags(logger.DefaultStdout(), res.TagReplaceable)
-	_ = res.AddWithTags(logger.DefaultLog(), res.TagReplaceable)
+	_ = res.AddWithTags(logger.DefaultLogConfig(), res.TagReplaceable)
+	_ = res.AddWithTags(logger.DefaultStdoutConfig(), res.TagReplaceable)
 }

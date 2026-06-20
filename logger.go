@@ -32,7 +32,15 @@ func (c Config) Build() (any, error) {
 	}, nil
 }
 
-// DefaultLog returns the system Logger resource for logger/use registration.
+// DefaultLogConfig returns the system Logger config for logger/use registration.
+func DefaultLogConfig() Config {
+	return Config{
+		Level:  &loggerv1.Level{Value: defaultLevelValue},
+		Format: &loggerv1.Format{Value: defaultFormatValue},
+	}
+}
+
+// DefaultLog returns the system Logger resource for tests and legacy callers.
 func DefaultLog() any {
 	return &logger{level: defaultLevelValue, format: defaultFormatValue}
 }

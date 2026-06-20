@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/omcrgnt/builder"
 	"github.com/omcrgnt/logger"
 	"github.com/omcrgnt/res"
 	"github.com/omcrgnt/sdi"
@@ -15,8 +16,11 @@ import (
 func setupUseDefaults(t *testing.T) {
 	t.Helper()
 	res.ResetDefault()
-	_ = res.AddWithTags(logger.DefaultStdout(), res.TagReplaceable)
-	_ = res.AddWithTags(logger.DefaultLog(), res.TagReplaceable)
+	_ = res.AddWithTags(logger.DefaultLogConfig(), res.TagReplaceable)
+	_ = res.AddWithTags(logger.DefaultStdoutConfig(), res.TagReplaceable)
+	if err := builder.Build(res.Default); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestIntegration_outputOnlyOverride(t *testing.T) {
@@ -24,11 +28,10 @@ func TestIntegration_outputOnlyOverride(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/output-only.log"
 
-	fileRaw, err := logger.OutputFileConfig{Path: path}.Build()
-	if err != nil {
+	if err := res.Add(logger.OutputFileConfig{Path: path}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(fileRaw); err != nil { //nolint:forbidigo // simulates app builder wiring
+	if err := builder.Build(res.Default); err != nil {
 		t.Fatal(err)
 	}
 
@@ -51,22 +54,16 @@ func TestIntegration_dedupAndResolve(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/integration.log"
 
-	fileRaw, err := logger.OutputFileConfig{Path: path}.Build()
-	if err != nil {
+	if err := res.Add(logger.OutputFileConfig{Path: path}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(fileRaw); err != nil { //nolint:forbidigo // simulates app builder wiring
-		t.Fatal(err)
-	}
-
-	logRaw, err := logger.Config{
+	if err := res.Add(logger.Config{
 		Level:  &loggerv1.Level{Value: "info"},
 		Format: &loggerv1.Format{Value: "json"},
-	}.Build()
-	if err != nil {
+	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
 		t.Fatal(err)
 	}
-	if err := res.Add(logRaw); err != nil { //nolint:forbidigo // simulates app builder wiring
+	if err := builder.Build(res.Default); err != nil {
 		t.Fatal(err)
 	}
 
