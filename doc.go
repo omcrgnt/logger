@@ -20,7 +20,7 @@ Without logger/use and without [Config] in app config, package funcs are no-op u
 	    LogFile   logger.OutputFileConfig    `ecfg:"LOG_FILE"`
 	}
 
-Pipeline: ecfg.Register(cfg, res.Default) → builder.Build(res.Default) → sdi.Resolve(res.Default).
+Pipeline: ecfg.Register(cfg, res.Global()) → builder.Build(res.Global()) → sdi.Resolve(res.Global()).
 Dedup removes system defaults when user Logger or Output is registered.
 
 # Usage
