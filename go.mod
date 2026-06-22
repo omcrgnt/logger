@@ -7,9 +7,17 @@ retract (
 	[v0.1.0, v0.20.0]
 )
 
+retract (
+	[v1.0.0, v1.20.0]
+	[v0.1.0, v0.20.0]
+)
+
 require (
 	github.com/omcrgnt/builder v0.20.1
+	github.com/omcrgnt/builder v0.20.1
 	github.com/omcrgnt/proto/gen/go v0.3.0
+	github.com/omcrgnt/res v0.20.1
+	github.com/omcrgnt/sdi v0.20.1
 	github.com/omcrgnt/res v0.20.1
 	github.com/omcrgnt/sdi v0.20.1
 )
@@ -20,7 +28,7 @@ require (
 )
 
 replace (
-	github.com/omcrgnt/builder => ../builder
-	github.com/omcrgnt/res => ../res
-	github.com/omcrgnt/sdi => ../sdi
+	github.com/omcrgnt/builder => /opt/github/builder
+	github.com/omcrgnt/res => /opt/github/res
+	github.com/omcrgnt/sdi => /opt/github/sdi
 )
