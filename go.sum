@@ -2,7 +2,13 @@ buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-202604152011
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1/go.mod h1:tvtbpgaVXZX4g6Pn+AnzFycuRK3MOz5HJfEGeEllXYM=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+github.com/omcrgnt/builder v0.20.2 h1:wkGNFAkN2DfjhDWrld/VFE7NuirOYPRHDtNUxHZe1Po=
+github.com/omcrgnt/builder v0.20.2/go.mod h1:VHaHlsJpO1tQHplRwwGouSadVvcbRru9Ud/Zdjhc3hI=
 github.com/omcrgnt/proto/gen/go v0.3.0 h1:N9ouU9osJ4stmED6LnY2cCUJe21XBommhel5tSlZfjo=
 github.com/omcrgnt/proto/gen/go v0.3.0/go.mod h1:XylKqMXLSRptwAPtnGx/s+tEVZoEvvkGJov6BgtYdz4=
+github.com/omcrgnt/res v0.20.2 h1:4NNN6gOEpIu1bWTlscGvDbxos6n5fymCpPIy8KzJqtM=
+github.com/omcrgnt/res v0.20.2/go.mod h1:mYMNfATQOqfJ+jOBPY/eZoKWlnmfSggkQCmX5xkt2Fc=
+github.com/omcrgnt/sdi v0.20.2 h1:Agv1dHBrF5gqXhS1OpcbTsoIAljiIE8F7/opWTM1lyM=
+github.com/omcrgnt/sdi v0.20.2/go.mod h1:f+mk/qZ35CxJrQKy5pZpcOP/JBF46vGQ+uy1m9hL6p0=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
 google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
