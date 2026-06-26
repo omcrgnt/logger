@@ -10,10 +10,7 @@ func (c OutputStdoutConfig) Build() (any, error) {
 	return DefaultStdout(), nil
 }
 
-// DefaultStdoutConfig returns the system Output config for logger/use registration.
-func DefaultStdoutConfig() OutputStdoutConfig { return OutputStdoutConfig{} }
-
-// DefaultStdout returns the system Output resource for tests and legacy callers.
+// DefaultStdout returns the system Output resource for logger/use registration.
 func DefaultStdout() any {
 	return stdoutOutput{}
 }

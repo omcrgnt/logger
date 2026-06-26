@@ -24,7 +24,7 @@ type Config struct {
 	Format *loggerv1.Format `ecfg:"FORMAT"`
 }
 
-// Build returns a Logger for res.Add and SDI.
+// Build returns a Logger resource for unique.Add.
 func (c Config) Build() (any, error) {
 	return &logger{
 		level:  c.Level.GetValue(),
@@ -32,15 +32,7 @@ func (c Config) Build() (any, error) {
 	}, nil
 }
 
-// DefaultLogConfig returns the system Logger config for logger/use registration.
-func DefaultLogConfig() Config {
-	return Config{
-		Level:  &loggerv1.Level{Value: defaultLevelValue},
-		Format: &loggerv1.Format{Value: defaultFormatValue},
-	}
-}
-
-// DefaultLog returns the system Logger resource for tests and legacy callers.
+// DefaultLog returns the system Logger resource for logger/use registration.
 func DefaultLog() any {
 	return &logger{level: defaultLevelValue, format: defaultFormatValue}
 }
@@ -99,7 +91,7 @@ func (l *logger) Error(ctx context.Context, msg string, args ...any) {
 	l.slog.ErrorContext(ctx, msg, args...)
 }
 
-// Default returns the process logger wired by sdi, or a no-op logger before [sdi.Resolve].
+// Default returns the process logger set by Inject, or a no-op logger before Inject.
 func Default() Logger {
 	return active
 }

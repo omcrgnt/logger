@@ -5,13 +5,11 @@ import (
 	"context"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/omcrgnt/builder"
-	"github.com/omcrgnt/res"
-	"github.com/omcrgnt/res/restest"
-	"github.com/omcrgnt/sdi"
+	"github.com/omcrgnt/res/unique"
 	loggerv1 "github.com/omcrgnt/proto/gen/go/logger/v1"
 )
 
@@ -23,17 +21,42 @@ func (t *testOutput) Write(p []byte) (int, error) { return t.buf.Write(p) }
 
 func (t *testOutput) markerLoggerOutput() {}
 
-// setupUseDefaults clears res and registers system Output + Log, as logger/use init does.
-func setupUseDefaults() {
-	restest.ResetGlobal()
+func setupUseDefaults(t *testing.T) *unique.Registry {
+	t.Helper()
 	active = noopLogger{}
-	_ = res.AddToGlobalWithTags(DefaultLogConfig(), res.TagReplaceable)
-	_ = res.AddToGlobalWithTags(DefaultStdoutConfig(), res.TagReplaceable)
-	_ = builder.Build(res.Global())
+	u := unique.New()
+	if err := u.AddReplaceable(DefaultLog()); err != nil {
+		t.Fatal(err)
+	}
+	if err := u.AddReplaceable(DefaultStdout()); err != nil {
+		t.Fatal(err)
+	}
+	return u
+}
+
+func wireFromRegistry(t *testing.T, u *unique.Registry) {
+	t.Helper()
+	active = noopLogger{}
+	logRaw, err := u.GetOneByInterface(reflect.TypeOf((*Logger)(nil)).Elem())
+	if err != nil {
+		t.Fatal(err)
+	}
+	outRaw, err := u.GetOneByInterface(reflect.TypeOf((*Output)(nil)).Elem())
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, ok := logRaw.(*logger)
+	if !ok {
+		t.Fatalf("expected *logger, got %T", logRaw)
+	}
+	out, ok := outRaw.(Output)
+	if !ok {
+		t.Fatalf("expected Output, got %T", outRaw)
+	}
+	l.Inject([]any{out})
 }
 
 func TestNoop_withoutRegistry(t *testing.T) {
-	restest.ResetGlobal()
 	active = noopLogger{}
 
 	Info(context.Background(), "silent")
@@ -41,39 +64,29 @@ func TestNoop_withoutRegistry(t *testing.T) {
 }
 
 func TestConfig_build(t *testing.T) {
-	restest.ResetGlobal()
 	active = noopLogger{}
-	if err := res.Global().Add(OutputStdoutConfig{}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+	outRaw, err := OutputStdoutConfig{}.Build()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := res.Global().Add(Config{
+	logRaw, err := Config{
 		Level:  &loggerv1.Level{Value: "info"},
 		Format: &loggerv1.Format{Value: "json"},
-	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+	}.Build()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := builder.Build(res.Global()); err != nil {
-		t.Fatal(err)
-	}
-	if err := sdi.Resolve(res.Global()); err != nil {
-		t.Fatal(err)
-	}
+	l := logRaw.(*logger)
+	l.Inject([]any{outRaw.(Output)})
 
 	Info(context.Background(), "hello")
 }
 
 func TestDefault_fromRegistry(t *testing.T) {
 	out := &testOutput{}
-	restest.ResetGlobal()
 	active = noopLogger{}
-	_ = res.Global().AddWithTags(out, res.TagReplaceable)
-	_ = res.Global().AddWithTags(DefaultLogConfig(), res.TagReplaceable)
-	if err := builder.Build(res.Global()); err != nil {
-		t.Fatal(err)
-	}
-	if err := sdi.Resolve(res.Global()); err != nil {
-		t.Fatal(err)
-	}
+	l := DefaultLog().(*logger)
+	l.Inject([]any{out})
 
 	Default().Info(context.Background(), "instance")
 	if !strings.Contains(out.buf.String(), "instance") {
@@ -100,50 +113,43 @@ func TestLogImpl_Inject(t *testing.T) {
 }
 
 func TestOutputStdoutConfig(t *testing.T) {
-	restest.ResetGlobal()
 	active = noopLogger{}
-
-	if err := res.Global().Add(OutputStdoutConfig{}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+	outRaw, err := OutputStdoutConfig{}.Build()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := res.Global().Add(Config{
+	logRaw, err := Config{
 		Level:  &loggerv1.Level{Value: "info"},
 		Format: &loggerv1.Format{Value: "text"},
-	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+	}.Build()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := builder.Build(res.Global()); err != nil {
-		t.Fatal(err)
-	}
-	if err := sdi.Resolve(res.Global()); err != nil {
-		t.Fatal(err)
-	}
+	l := logRaw.(*logger)
+	l.Inject([]any{outRaw.(Output)})
 
 	Info(context.Background(), "stdout-line")
 }
 
 func TestOutputFileConfig(t *testing.T) {
-	restest.ResetGlobal()
 	active = noopLogger{}
 
 	dir := t.TempDir()
 	path := dir + "/app.log"
 
-	if err := res.Global().Add(OutputFileConfig{Path: path}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+	outRaw, err := OutputFileConfig{Path: path}.Build()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := res.Global().Add(Config{
+	logRaw, err := Config{
 		Level:  &loggerv1.Level{Value: "info"},
 		Format: &loggerv1.Format{Value: "text"},
-	}); err != nil { //nolint:forbidigo // simulates ecfg.Register
+	}.Build()
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := builder.Build(res.Global()); err != nil {
-		t.Fatal(err)
-	}
-	if err := sdi.Resolve(res.Global()); err != nil {
-		t.Fatal(err)
-	}
+	l := logRaw.(*logger)
+	l.Inject([]any{outRaw.(Output)})
 
 	Info(context.Background(), "file-line")
 	data, err := os.ReadFile(path)
@@ -163,7 +169,7 @@ func TestOutputFileConfig_emptyPath(t *testing.T) {
 }
 
 func TestInfo_afterResolve(t *testing.T) {
-	setupUseDefaults()
+	u := setupUseDefaults(t)
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
@@ -172,9 +178,7 @@ func TestInfo_afterResolve(t *testing.T) {
 	os.Stdout = w
 	t.Cleanup(func() { os.Stdout = old })
 
-	if err := sdi.Resolve(res.Global()); err != nil {
-		t.Fatal(err)
-	}
+	wireFromRegistry(t, u)
 
 	Info(context.Background(), "bootstrap-test")
 
@@ -188,5 +192,67 @@ func TestInfo_afterResolve(t *testing.T) {
 	out := <-done
 	if !strings.Contains(string(out), "bootstrap-test") {
 		t.Fatalf("stdout: %q", out)
+	}
+}
+
+func TestRegistry_outputOverride(t *testing.T) {
+	u := setupUseDefaults(t)
+	dir := t.TempDir()
+	path := dir + "/output-only.log"
+
+	outBuilt, err := OutputFileConfig{Path: path}.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := u.Add(outBuilt); err != nil {
+		t.Fatal(err)
+	}
+	logRaw, err := u.GetOneByInterface(reflect.TypeOf((*Logger)(nil)).Elem())
+	if err != nil {
+		t.Fatal(err)
+	}
+	logRaw.(*logger).Inject([]any{outBuilt.(Output)})
+
+	Info(context.Background(), "output-only")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "output-only") {
+		t.Fatalf("expected log in file, got %q", data)
+	}
+}
+
+func TestRegistry_loggerOverride(t *testing.T) {
+	u := setupUseDefaults(t)
+	dir := t.TempDir()
+	path := dir + "/integration.log"
+
+	outBuilt, err := OutputFileConfig{Path: path}.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := u.Add(outBuilt); err != nil {
+		t.Fatal(err)
+	}
+	logBuilt, err := Config{
+		Level:  &loggerv1.Level{Value: "info"},
+		Format: &loggerv1.Format{Value: "json"},
+	}.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := u.Add(logBuilt); err != nil {
+		t.Fatal(err)
+	}
+	logBuilt.(*logger).Inject([]any{outBuilt.(Output)})
+
+	Info(context.Background(), "after-resolve")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "after-resolve") {
+		t.Fatalf("expected log in file, got %q", data)
 	}
 }
