@@ -1,4 +1,4 @@
-// Package use registers logger system defaults in res.Global.
+// Package use registers logger system defaults in unique.Global.
 //
 // Import for side effects at the app composition root (main or a meta use package):
 //
@@ -7,10 +7,10 @@ package use
 
 import (
 	"github.com/omcrgnt/logger"
-	"github.com/omcrgnt/res"
+	"github.com/omcrgnt/res/unique"
 )
 
 func init() {
-	_ = res.AddToGlobalWithTags(logger.DefaultLogConfig(), res.TagReplaceable)
-	_ = res.AddToGlobalWithTags(logger.DefaultStdoutConfig(), res.TagReplaceable)
+	unique.MustAddReplaceable(logger.DefaultLog())
+	unique.MustAddReplaceable(logger.DefaultStdout())
 }

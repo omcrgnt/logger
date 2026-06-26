@@ -1,5 +1,5 @@
 /*
-Package logger provides structured logging (log/slog) with resources in res and SDI wiring.
+Package logger provides structured logging (log/slog) with resources in unique.
 
 # Bootstrap
 
@@ -9,23 +9,23 @@ Blank-import the use subpackage at the app composition root (not logger itself):
 
 	logger.Info(ctx, "started", "port", 8080)
 
-logger/use registers default configs in res ([res.TagReplaceable]) via [DefaultLogConfig] and [DefaultStdoutConfig].
-Without logger/use and without [Config] in app config, package funcs are no-op until [sdi.Resolve] after [github.com/omcrgnt/builder].Build.
+logger/use registers [DefaultLog] and [DefaultStdout] via unique.MustAddReplaceable.
+Without logger/use, package funcs are no-op until the logger resource is wired (Inject sets active).
 
 # User override
 
-	type AppConfig struct {
-	    Logger    logger.Config              `ecfg:"LOGGER"`
-	    LogStdout logger.OutputStdoutConfig  `ecfg:"LOG_STDOUT"`
-	    LogFile   logger.OutputFileConfig    `ecfg:"LOG_FILE"`
-	}
+Build and register user resources with unique.Add (replaces system defaults of the same type):
 
-Pipeline: ecfg.Register(cfg, res.Global()) → builder.Build(res.Global()) → sdi.Resolve(res.Global()).
-Dedup removes system defaults when user Logger or Output is registered.
+	logBuilt, err := cfg.Logger.Build()
+	outBuilt, err := cfg.LogFile.Build()
+	unique.Global().Add(outBuilt)
+	unique.Global().Add(logBuilt)
+
+Types [Config], [OutputStdoutConfig], and [OutputFileConfig] implement Build for override.
 
 # Usage
 
-Package funcs (Info, Debug, …) and [Default] delegate to the logger wired by sdi (Inject sets active).
+Package funcs (Info, Debug, …) and [Default] delegate to the logger wired by Inject.
 
 For DI, declare the port in Deps:
 
@@ -33,15 +33,9 @@ For DI, declare the port in Deps:
 	    return []any{(*logger.Logger)(nil)}
 	}
 
-If [Logger] is not in res, sdi.Resolve fails for resources that depend on it.
-
-# SDI
+# Wiring
 
 Concrete logger implements [Logger]; Deps returns (*Output)(nil).
-[Config.Build], [OutputStdoutConfig.Build], and [OutputFileConfig.Build] materialize runtime resources.
-[DefaultLogConfig] and [DefaultStdoutConfig] are for logger/use system registration.
-[DefaultLog] and [DefaultStdout] remain for tests.
-
-See https://github.com/omcrgnt/demo/blob/main/docs/res-sdi-coupling.md.
+[DefaultLog] and [DefaultStdout] are for logger/use system registration.
 */
 package logger
