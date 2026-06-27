@@ -25,12 +25,8 @@ func setupUseDefaults(t *testing.T) *unique.Registry {
 	t.Helper()
 	active = noopLogger{}
 	u := unique.New()
-	if err := u.AddReplaceable(DefaultLog()); err != nil {
-		t.Fatal(err)
-	}
-	if err := u.AddReplaceable(DefaultStdout()); err != nil {
-		t.Fatal(err)
-	}
+	u.MustAddReplaceable(DefaultLog())
+	u.MustAddReplaceable(DefaultStdout())
 	return u
 }
 
