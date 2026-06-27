@@ -1,15 +1,26 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 
-version: '3'
+version: 3
 
 vars:
+  DOCKER_IMAGE: golang:alpine
   LINT_CONFIG: ../lint/go/config/system.golangci.yml
 
 tasks:
+  test-u:
+    desc: Unit tests in Docker
+    cmds:
+      - |
+        docker run --rm \
+          -v "{{.USER_WORKING_DIR}}:/workspace" \
+          -w /workspace \
+          {{.DOCKER_IMAGE}} \
+          sh -c "go test -v ./..."
+
   test:
     desc: Run unit tests
     cmds:
-      - go test ./...
+      - task: test-u
 
   lint:
     desc: Run golangci with system profile (forbid res.Add)
