@@ -10,7 +10,7 @@ retract (
 
 require (
 	github.com/omcrgnt/proto/gen/go v0.3.0
-	github.com/omcrgnt/res v0.21.1
+	github.com/omcrgnt/res v0.22.0
 )
 
 require (
